@@ -33,8 +33,22 @@ def call_ai(keyword: str):
 
 # ===== API =====
 @app.post("/generate")
-def generate(req: Request):
-    return {"result": call_ai(req.keyword)}
+def generate(req: Req):
+    try:
+        keyword = req.keyword
+
+        result = [
+            f"{keyword}真的太绝了！",
+            f"被{keyword}狠狠惊艳了",
+            f"{keyword}平替天花板来了",
+            f"谁懂{keyword}的含金量",
+            f"{keyword}真的封神了"
+        ]
+
+        return {"result": "\n".join(result)}
+
+    except Exception as e:
+        return {"result": str(e)}
 
 
 # ===== 🌐 网页（重点！）=====

@@ -278,9 +278,11 @@ def admin_key_is_valid(admin_key: str) -> bool:
 
 
 def payment_qr_url(pay_type: str) -> str:
+    default_alipay = "https://raw.githubusercontent.com/yehuar129-jpg/xhs-title-ai/main/alipay.png"
+    default_wxpay = "https://raw.githubusercontent.com/yehuar129-jpg/xhs-title-ai/main/wechat.png"
     if pay_type == "wxpay":
-        return os.getenv("WXPAY_QR_URL", os.getenv("PERSONAL_PAY_QR_URL", "")).strip()
-    return os.getenv("ALIPAY_QR_URL", os.getenv("PERSONAL_PAY_QR_URL", "")).strip()
+        return os.getenv("WXPAY_QR_URL", os.getenv("PERSONAL_PAY_QR_URL", default_wxpay)).strip()
+    return os.getenv("ALIPAY_QR_URL", os.getenv("PERSONAL_PAY_QR_URL", default_alipay)).strip()
 
 
 @app.get("/")

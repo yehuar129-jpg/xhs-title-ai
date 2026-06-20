@@ -1,18 +1,28 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from fastapi.responses import HTMLResponse
 import requests
+import os
 
 app = FastAPI()
 
-class Request(BaseModel):
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class Req(BaseModel):
     keyword: str
 
 
-def call_ai(keyword: str):
-    api_key = "你的API_KEY"
+@app.post("/generate")
+def generate(req: Req):
 
-    url = "https://openrouter.ai/api/v1/chat/completions"
+    api_key = os.getenv("DEEPSEEK_API_KEY")  # 🔥 放环境变量
+
+    url = "https://api.deepseek.com/chat/completions"
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -20,72 +30,15 @@ def call_ai(keyword: str):
     }
 
     data = {
-        "model": "openai/gpt-4o-mini",
+        "model": "deepseek-chat",
         "messages": [{
             "role": "user",
-            "content": f"生成10条小红书爆款标题，关键词：{keyword}"
+            "content": f"生成10条小红书爆款标题：{req.keyword}"
         }]
     }
 
     res = requests.post(url, headers=headers, json=data)
-    return res.json()["choices"][0]["message"]["content"]
 
+    result = res.json()["choices"][0]["message"]["content"]
 
-# ===== API =====
-@app.post("/generate")
-def generate(req: Req):
-    try:
-        keyword = req.keyword
-
-        result = [
-            f"{keyword}真的太绝了！",
-            f"被{keyword}狠狠惊艳了",
-            f"{keyword}平替天花板来了",
-            f"谁懂{keyword}的含金量",
-            f"{keyword}真的封神了"
-        ]
-
-        return {"result": "\n".join(result)}
-
-    except Exception as e:
-        return {"result": str(e)}
-
-
-# ===== 🌐 网页（重点！）=====
-@app.get("/", response_class=HTMLResponse)
-def home():
-    return """
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>小红书AI标题生成器</title>
-    </head>
-
-    <body style="text-align:center; font-family:Arial; margin-top:80px;">
-
-        <h1>🔥 小红书AI爆款标题生成器</h1>
-
-        <input id="kw" placeholder="输入关键词" style="padding:10px; width:300px;">
-        <button onclick="go()" style="padding:10px 20px;">生成</button>
-
-        <pre id="res" style="margin-top:30px; white-space:pre-wrap;"></pre>
-
-        <script>
-            async function go(){
-                let keyword = document.getElementById('kw').value;
-
-                let res = await fetch('/generate', {
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({keyword})
-                });
-
-                let data = await res.json();
-
-                document.getElementById('res').innerText = data.result;
-            }
-        </script>
-
-    </body>
-    </html>
-    """
+    return {"result": result}

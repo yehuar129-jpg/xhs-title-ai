@@ -143,6 +143,17 @@
       border: 1px solid #fedf89;
       font-size: 14px;
     }
+    .auth-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 140px auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .auth-panel input { height: 42px; font-size: 14px; }
+    .auth-panel button { height: 42px; padding: 0 12px; font-size: 14px; }
+    .auth-note { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
     .results {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -220,6 +231,7 @@
     @media (max-width: 560px) {
       .shell { width: min(100% - 24px, 1180px); }
       .input-row { grid-template-columns: 1fr; }
+      .auth-panel { grid-template-columns: 1fr; }
       button { width: 100%; }
       .workspace, .side { padding: 16px; }
     }
@@ -240,6 +252,14 @@
         <span class="pill">今日剩余：<strong id="usageText">--</strong></span>
       </div>
     </header>
+
+    <section class="panel auth-panel">
+      <input id="phoneInput" placeholder="手机号登录，找回 Pro" autocomplete="tel" />
+      <input id="codeInput" placeholder="验证码" inputmode="numeric" />
+      <button id="sendCodeBtn" type="button">获取验证码</button>
+      <button id="loginBtn" type="button">登录</button>
+      <div id="loginState" class="auth-note">同一手机号登录后，可在刷新网页或换浏览器时找回 Pro。</div>
+    </section>
 
     <main class="app">
       <section class="panel workspace">
@@ -286,10 +306,15 @@
   <script>
     const apiBase = location.protocol.startsWith("http") ? "" : "http://127.0.0.1:8000";
     const userKey = "xhs_title_ai_user_id";
-    const userId = localStorage.getItem(userKey) || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+    let userId = localStorage.getItem(userKey) || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
     localStorage.setItem(userKey, userId);
 
     const keywordInput = document.getElementById("keywordInput");
+    const phoneInput = document.getElementById("phoneInput");
+    const codeInput = document.getElementById("codeInput");
+    const sendCodeBtn = document.getElementById("sendCodeBtn");
+    const loginBtn = document.getElementById("loginBtn");
+    const loginState = document.getElementById("loginState");
     const generateBtn = document.getElementById("generateBtn");
     const upgradeBtn = document.getElementById("upgradeBtn");
     const results = document.getElementById("results");
@@ -316,6 +341,64 @@
       const res = await fetch(`${apiBase}/user_status?user_id=${encodeURIComponent(userId)}`);
       setStatus(await res.json());
     }
+
+    sendCodeBtn.addEventListener("click", async () => {
+      const phone = phoneInput.value.trim();
+      if (!phone) {
+        loginState.textContent = "请输入手机号。";
+        phoneInput.focus();
+        return;
+      }
+      sendCodeBtn.disabled = true;
+      sendCodeBtn.textContent = "发送中...";
+      try {
+        const res = await fetch(`${apiBase}/send_login_code`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          loginState.textContent = data.detail || "验证码发送失败。";
+          return;
+        }
+        loginState.textContent = data.code ? `测试验证码：${data.code}` : data.message;
+      } finally {
+        sendCodeBtn.disabled = false;
+        sendCodeBtn.textContent = "获取验证码";
+      }
+    });
+
+    loginBtn.addEventListener("click", async () => {
+      const phone = phoneInput.value.trim();
+      const code = codeInput.value.trim();
+      if (!phone || !code) {
+        loginState.textContent = "请输入手机号和验证码。";
+        return;
+      }
+      loginBtn.disabled = true;
+      loginBtn.textContent = "登录中...";
+      try {
+        const res = await fetch(`${apiBase}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, code })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          loginState.textContent = data.detail || "登录失败。";
+          return;
+        }
+        userId = data.user_id;
+        localStorage.setItem(userKey, userId);
+        document.getElementById("userIdText").textContent = userId;
+        setStatus(data);
+        loginState.textContent = `已登录：${data.phone}，套餐：${data.plan}`;
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = "登录";
+      }
+    });
 
     function renderTitles(titles) {
       empty.style.display = "none";

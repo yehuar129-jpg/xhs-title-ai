@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>小红书爆款标题AI Pro</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #667085;
+      --line: #e7e9f0;
+      --soft: #f6f8fb;
+      --brand: #d92d20;
+      --brand-dark: #b42318;
+      --green: #057a55;
+      --gold: #b54708;
+      --blue: #175cd3;
+      --shadow: 0 14px 38px rgba(23, 32, 51, .10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(217, 45, 32, .10), transparent 28rem),
+        linear-gradient(180deg, #fff 0%, #f7f8fb 100%);
+    }
+    .shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 22px 0;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .mark {
+      width: 40px; height: 40px; border-radius: 8px;
+      display: grid; place-items: center;
+      color: #fff; background: var(--brand);
+      font-weight: 900;
+    }
+    h1 { margin: 0; font-size: clamp(24px, 4vw, 44px); line-height: 1.08; letter-spacing: 0; }
+    h2 { margin: 0 0 14px; font-size: 22px; letter-spacing: 0; }
+    p { margin: 0; color: var(--muted); line-height: 1.7; }
+    .status {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .pill strong { color: var(--ink); }
+    .app {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 22px;
+      align-items: start;
+      padding: 20px 0 38px;
+    }
+    .panel {
+      background: rgba(255,255,255,.92);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    .workspace { padding: 22px; }
+    .headline { margin-bottom: 18px; }
+    .headline p { max-width: 680px; }
+    .input-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    input {
+      width: 100%;
+      height: 52px;
+      border: 1px solid #d0d5dd;
+      border-radius: 8px;
+      padding: 0 15px;
+      color: var(--ink);
+      font-size: 16px;
+      outline: none;
+      background: #fff;
+    }
+    input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(217,45,32,.14); }
+    button {
+      height: 52px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 18px;
+      background: var(--brand);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    button:hover { background: var(--brand-dark); }
+    button:disabled { cursor: wait; opacity: .65; }
+    .ghost {
+      width: 100%;
+      margin-top: 14px;
+      border: 1px solid #f6c5bd;
+      background: #fff5f3;
+      color: var(--brand-dark);
+    }
+    .ghost:hover { background: #ffe8e4; }
+    .pay-methods {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .pay-option {
+      height: 42px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      font-weight: 800;
+    }
+    .pay-option:hover { background: var(--soft); }
+    .pay-option.active {
+      border-color: var(--brand);
+      background: #fff5f3;
+      color: var(--brand-dark);
+    }
+    .notice {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      color: #7a2e0e;
+      background: #fff4e5;
+      border: 1px solid #fedf89;
+      font-size: 14px;
+    }
+    .results {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+    .title-card {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 15px;
+      min-height: 172px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .card-top { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      border-radius: 999px;
+      padding: 4px 9px;
+      color: var(--blue);
+      background: #eff6ff;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .score { color: var(--gold); font-weight: 900; white-space: nowrap; }
+    .title-text { font-size: 18px; font-weight: 900; line-height: 1.45; color: #101828; }
+    .reason { font-size: 13px; color: var(--muted); line-height: 1.6; flex: 1; }
+    .copy {
+      height: 38px;
+      align-self: flex-start;
+      background: #111827;
+      padding: 0 12px;
+      font-size: 13px;
+    }
+    .copy:hover { background: #344054; }
+    .side { padding: 18px; }
+    .price {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin: 8px 0 14px;
+    }
+    .price strong { font-size: 32px; }
+    .compare { display: grid; gap: 10px; margin-top: 14px; }
+    .compare-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .compare-row strong { display: block; color: var(--ink); margin-bottom: 4px; }
+    .pro { color: var(--green); font-weight: 900; }
+    .empty {
+      margin-top: 20px;
+      border: 1px dashed #cfd4dc;
+      border-radius: 8px;
+      padding: 34px 18px;
+      text-align: center;
+      background: var(--soft);
+    }
+    footer { padding: 10px 0 30px; color: var(--muted); font-size: 13px; }
+    @media (max-width: 860px) {
+      header { align-items: flex-start; flex-direction: column; }
+      .status { justify-content: flex-start; }
+      .app { grid-template-columns: 1fr; }
+      .results { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .shell { width: min(100% - 24px, 1180px); }
+      .input-row { grid-template-columns: 1fr; }
+      button { width: 100%; }
+      .workspace, .side { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <div class="mark">爆</div>
+        <div>
+          <h1>小红书爆款标题AI Pro</h1>
+          <p>输入关键词，生成带类型、评分和理由的商业化标题方案。</p>
+        </div>
+      </div>
+      <div class="status">
+        <span class="pill">套餐：<strong id="planText">free</strong></span>
+        <span class="pill">今日剩余：<strong id="usageText">--</strong></span>
+      </div>
+    </header>
+
+    <main class="app">
+      <section class="panel workspace">
+        <div class="headline">
+          <h2>标题生成工作台</h2>
+          <p>免费版每次生成5条，每天5次；Pro每次生成50条，并使用更完整的爆款标题策略。</p>
+          <div class="input-row">
+            <input id="keywordInput" placeholder="例如：减脂早餐、通勤穿搭、AI副业" autocomplete="off" />
+            <button id="generateBtn">生成标题</button>
+          </div>
+          <div id="notice" class="notice"></div>
+        </div>
+        <div id="empty" class="empty">
+          <strong>等待生成</strong>
+          <p>结果会以卡片形式展示，包含类型标签、爆款评分和复制按钮。</p>
+        </div>
+        <div id="results" class="results"></div>
+      </section>
+
+      <aside class="panel side">
+        <h2>升级 Pro</h2>
+        <p>适合批量测试选题、运营账号、写投放素材和做客户交付。</p>
+        <div class="price"><strong>¥19.9</strong><span>/ 月起</span></div>
+        <div class="pay-methods" aria-label="选择支付方式">
+          <button type="button" class="pay-option active" data-pay-type="alipay">支付宝</button>
+          <button type="button" class="pay-option" data-pay-type="wxpay">微信支付</button>
+        </div>
+        <button id="upgradeBtn" class="ghost">升级 Pro</button>
+        <div class="compare">
+          <div class="compare-row">
+            <div><strong>免费版</strong>5条/次<br>每天5次<br>基础策略</div>
+            <div><strong class="pro">Pro版</strong>50条/次<br>无限使用<br>高质量策略</div>
+          </div>
+          <div class="compare-row">
+            <div><strong>适用</strong>偶尔测试标题</div>
+            <div><strong class="pro">适用</strong>账号运营、批量生产、商业交付</div>
+          </div>
+        </div>
+      </aside>
+    </main>
+    <footer>当前用户ID：<span id="userIdText"></span></footer>
+  </div>
+
+  <script>
+    const apiBase = location.protocol.startsWith("http") ? "" : "http://127.0.0.1:8000";
+    const userKey = "xhs_title_ai_user_id";
+    const userId = localStorage.getItem(userKey) || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+    localStorage.setItem(userKey, userId);
+
+    const keywordInput = document.getElementById("keywordInput");
+    const generateBtn = document.getElementById("generateBtn");
+    const upgradeBtn = document.getElementById("upgradeBtn");
+    const results = document.getElementById("results");
+    const empty = document.getElementById("empty");
+    const notice = document.getElementById("notice");
+    const planText = document.getElementById("planText");
+    const usageText = document.getElementById("usageText");
+    let selectedPayType = "alipay";
+    document.getElementById("userIdText").textContent = userId;
+
+    function showNotice(text) {
+      notice.textContent = text;
+      notice.style.display = text ? "block" : "none";
+    }
+
+    function setStatus(data) {
+      planText.textContent = data.plan || "free";
+      usageText.textContent = data.usage_left === -1 ? "无限" : data.usage_left;
+      upgradeBtn.textContent = data.plan === "pro" ? "已开通 Pro" : "升级 Pro";
+      upgradeBtn.disabled = data.plan === "pro";
+    }
+
+    async function refreshStatus() {
+      const res = await fetch(`${apiBase}/user_status?user_id=${encodeURIComponent(userId)}`);
+      setStatus(await res.json());
+    }
+
+    function renderTitles(titles) {
+      empty.style.display = "none";
+      results.innerHTML = "";
+      for (const item of titles) {
+        const card = document.createElement("article");
+        card.className = "title-card";
+        card.innerHTML = `
+          <div class="card-top">
+            <span class="tag">${item.type}</span>
+            <span class="score">🔥 ${item.score}</span>
+          </div>
+          <div class="title-text"></div>
+          <div class="reason"></div>
+          <button class="copy">复制</button>
+        `;
+        card.querySelector(".title-text").textContent = item.title;
+        card.querySelector(".reason").textContent = item.reason;
+        const copyBtn = card.querySelector(".copy");
+        copyBtn.addEventListener("click", async () => {
+          await navigator.clipboard.writeText(item.title);
+          copyBtn.textContent = "已复制";
+          setTimeout(() => copyBtn.textContent = "复制", 900);
+        });
+        results.appendChild(card);
+      }
+    }
+
+    generateBtn.addEventListener("click", async () => {
+      const keyword = keywordInput.value.trim();
+      if (!keyword) {
+        showNotice("请输入一个关键词。");
+        keywordInput.focus();
+        return;
+      }
+      generateBtn.disabled = true;
+      generateBtn.textContent = "生成中...";
+      showNotice("");
+      try {
+        const res = await fetch(`${apiBase}/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ keyword, user_id: userId })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showNotice((data.detail && data.detail.message) || "生成失败，请稍后再试。");
+          if (data.detail) setStatus(data.detail);
+          return;
+        }
+        setStatus(data);
+        renderTitles(data.titles);
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.textContent = "生成标题";
+      }
+    });
+
+    upgradeBtn.addEventListener("click", async () => {
+      upgradeBtn.disabled = true;
+      upgradeBtn.textContent = "创建订单...";
+      try {
+        const res = await fetch(`${apiBase}/create_order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, pay_type: selectedPayType })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showNotice((data.detail && String(data.detail)) || "支付配置缺失，请先配置聚合支付商户参数。");
+          return;
+        }
+        location.href = data.pay_url;
+      } catch (err) {
+        showNotice("创建订单失败，请稍后再试。");
+      } finally {
+        upgradeBtn.disabled = false;
+        upgradeBtn.textContent = "升级 Pro";
+      }
+    });
+
+    document.querySelectorAll(".pay-option").forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedPayType = button.dataset.payType;
+        document.querySelectorAll(".pay-option").forEach((item) => item.classList.remove("active"));
+        button.classList.add("active");
+      });
+    });
+
+    if (new URLSearchParams(location.search).get("paid") === "success") {
+      showNotice("Pro 已开通，现在可以无限生成50条高质量标题。");
+      history.replaceState({}, "", "/");
+    }
+    refreshStatus();
+  </script>
+</body>
+</html>

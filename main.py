@@ -467,15 +467,25 @@ def admin_orders(admin_key: str = "") -> str:
     """
 
 
-@app.get("/admin_activate")
-def admin_activate(order_id: str, admin_key: str = "") -> Dict[str, object]:
+@app.get("/admin_activate", response_class=HTMLResponse)
+def admin_activate(order_id: str, admin_key: str = "") -> str:
     if not admin_key_is_valid(admin_key):
         raise HTTPException(status_code=403, detail="管理员密钥错误")
     order = orders.get(order_id)
     if not order:
         raise HTTPException(status_code=404, detail="订单不存在")
     user = mark_user_pro(str(order["user_id"]), order_id)
-    return {"ok": True, "order_id": order_id, "user_id": order["user_id"], "plan": user["plan"]}
+    return f"""
+    <!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>审核通过</title></head>
+    <body style="font-family:Arial,'Microsoft YaHei',sans-serif;padding:40px;color:#111827">
+      <h1>审核通过，Pro 已生效</h1>
+      <p>订单号：<code>{order_id}</code></p>
+      <p>用户已开通 Pro，可以返回订单页继续处理其他订单。</p>
+      <p><a href="/admin_orders?admin_key={admin_key}" style="color:#b42318">返回订单页</a></p>
+    </body></html>
+    """
 
 
 @app.get("/pay_success", response_class=HTMLResponse)

@@ -1,8 +1,12 @@
 from datetime import date, datetime
 import hashlib
 import hmac
+import json
 import os
 from pathlib import Path
+import random
+import re
+import time
 from typing import Dict, List, Literal, Optional
 from urllib.parse import parse_qs, urlencode
 from uuid import uuid4
@@ -30,6 +34,29 @@ PRO_PRICE = os.getenv("PRO_PRICE", "19.90")
 
 users: Dict[str, Dict[str, object]] = {}
 orders: Dict[str, Dict[str, object]] = {}
+phone_users: Dict[str, str] = {}
+login_codes: Dict[str, Dict[str, object]] = {}
+DATA_FILE = Path(os.getenv("DATA_FILE", "data_store.json"))
+
+
+def load_store() -> None:
+    if not DATA_FILE.exists():
+        return
+    try:
+        data = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    users.update(data.get("users", {}))
+    orders.update(data.get("orders", {}))
+    phone_users.update(data.get("phone_users", {}))
+
+
+def save_store() -> None:
+    data = {"users": users, "orders": orders, "phone_users": phone_users}
+    DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+load_store()
 
 
 class GenerateRequest(BaseModel):
@@ -59,6 +86,15 @@ class PaymentProofRequest(BaseModel):
     order_id: str = Field(..., min_length=1)
     contact: str = ""
     note: str = ""
+
+
+class SendCodeRequest(BaseModel):
+    phone: str = Field(..., min_length=6, max_length=30)
+
+
+class LoginRequest(BaseModel):
+    phone: str = Field(..., min_length=6, max_length=30)
+    code: str = Field(..., min_length=4, max_length=8)
 
 
 TITLE_STRATEGIES = {
@@ -151,6 +187,26 @@ def today_key() -> str:
     return date.today().isoformat()
 
 
+def normalize_phone(phone: str) -> str:
+    digits = re.sub(r"\D", "", phone)
+    if digits.startswith("86") and len(digits) == 13:
+        digits = digits[2:]
+    if len(digits) < 6 or len(digits) > 15:
+        raise HTTPException(status_code=400, detail="手机号格式不正确")
+    return digits
+
+
+def user_id_for_phone(phone: str) -> str:
+    if phone in phone_users:
+        return phone_users[phone]
+    user_id = "phone_" + hashlib.sha256(phone.encode("utf-8")).hexdigest()[:24]
+    phone_users[phone] = user_id
+    user = ensure_user(user_id)
+    user["phone"] = phone
+    save_store()
+    return user_id
+
+
 def ensure_user(user_id: str) -> Dict[str, object]:
     user = users.setdefault(
         user_id,
@@ -159,6 +215,7 @@ def ensure_user(user_id: str) -> Dict[str, object]:
     if user["usage_date"] != today_key():
         user["used_today"] = 0
         user["usage_date"] = today_key()
+        save_store()
     return user
 
 
@@ -203,6 +260,7 @@ def mark_user_pro(user_id: str, order_id: Optional[str] = None) -> Dict[str, obj
     if order_id and order_id in orders:
         orders[order_id]["status"] = "paid"
         orders[order_id]["paid_at"] = datetime.utcnow().isoformat()
+    save_store()
     return user
 
 
@@ -290,6 +348,40 @@ def home() -> FileResponse:
     return FileResponse(Path(__file__).with_name("index.html"))
 
 
+@app.post("/send_login_code")
+def send_login_code(payload: SendCodeRequest) -> Dict[str, object]:
+    phone = normalize_phone(payload.phone)
+    code = f"{random.randint(100000, 999999)}"
+    login_codes[phone] = {"code": code, "expires_at": time.time() + 600}
+    demo_mode = os.getenv("SMS_PROVIDER", "demo").strip().lower() == "demo"
+    response: Dict[str, object] = {"ok": True, "message": "验证码已发送，10分钟内有效"}
+    if demo_mode:
+        response["code"] = code
+        response["message"] = "测试模式：验证码已显示在页面上"
+    return response
+
+
+@app.post("/login")
+def login(payload: LoginRequest) -> Dict[str, object]:
+    phone = normalize_phone(payload.phone)
+    record = login_codes.get(phone)
+    if not record or record.get("expires_at", 0) < time.time():
+        raise HTTPException(status_code=400, detail="验证码已过期，请重新获取")
+    if str(record.get("code")) != payload.code.strip():
+        raise HTTPException(status_code=400, detail="验证码错误")
+    user_id = user_id_for_phone(phone)
+    user = ensure_user(user_id)
+    login_codes.pop(phone, None)
+    save_store()
+    return {
+        "ok": True,
+        "user_id": user_id,
+        "phone": phone[-4:].rjust(len(phone), "*"),
+        "plan": user["plan"],
+        "usage_left": usage_left(user),
+    }
+
+
 @app.get("/user_status")
 def user_status(user_id: str = Query(..., min_length=1)) -> Dict[str, object]:
     user = ensure_user(user_id)
@@ -338,6 +430,7 @@ def create_order(payload: CreateOrderRequest, request: Request) -> Dict[str, str
         "status": "pending",
         "created_at": datetime.utcnow().isoformat(),
     }
+    save_store()
     return {
         "order_id": order_id,
         "pay_type": payload.pay_type,
@@ -420,6 +513,7 @@ async def submit_payment_proof(request: Request) -> str:
     order["contact"] = data.get("contact", "")
     order["note"] = data.get("note", "")
     order["submitted_at"] = datetime.utcnow().isoformat()
+    save_store()
     return f"""
     <!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
